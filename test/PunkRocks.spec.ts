@@ -45,15 +45,21 @@ describe('PunkRocks test all success and revert cases', () => {
     )
     // attempt pre-mint from second wallet
     token = token.connect(signers[1])
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith('ONLY_OWNER')
+    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
+      'ONLY_OWNER'
+    )
     // connect to main wallet and successfully pre-mint total amount
     token = token.connect(wallet)
     await expect(token.preMint(200, wallet.address)).to.not.be.reverted
     // max supply
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith('TOTAL_SUPPLY_MINTED')
+    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
+      'TOTAL_SUPPLY_MINTED'
+    )
     // timeout pre-mint period
     await ethers.provider.send('evm_increaseTime', [7200])
     await ethers.provider.send('evm_mine', [])
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith('PRE_MINT_CLOSED')
+    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
+      'PRE_MINT_CLOSED'
+    )
   })
 })
