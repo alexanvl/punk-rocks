@@ -1,9 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
-import { deployMockContract } from 'ethereum-waffle'
 import { Contract, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
-import CryptoPunks from './abi/punks.json'
 
 const zero = ethers.BigNumber.from(0)
 const proxy = '0xf57b2c51ded3a29e6891aba85459d600256cf317'
@@ -12,75 +10,84 @@ const symbol = 'PUNKROCKS'
 const baseURI = 'https:/test.server/'
 
 let NFT: ContractFactory
-let punks: any
+let punks: Contract
 let token: Contract
 let signers: SignerWithAddress[]
 let wallet: SignerWithAddress
 
 describe('PunkRocks test all success and revert cases', () => {
-  before(async () => {
+  beforeEach(async () => {
+    const CryptoPunks = await ethers.getContractFactory('CryptoPunksMarket')
+    punks = await CryptoPunks.deploy()
     NFT = await ethers.getContractFactory('PunkRocks')
     signers = await ethers.getSigners()
     wallet = signers[0]
-    punks = await deployMockContract(wallet as any, (CryptoPunks as any).abi)
+    // deploy a token
+    token = await NFT.deploy(
+      name,
+      symbol,
+      baseURI,
+      ethers.utils.parseEther('0.069'),
+      punks.address,
+      proxy
+    )
+
+    // populate some punks
+    await punks.setInitialOwners(
+      [signers[1].address, signers[2].address],
+      [2, 3]
+    )
   })
 
-  it('constructor', async () => {
-    await expect(
-      NFT.deploy(
-        name,
-        symbol,
-        baseURI,
-        ethers.utils.parseEther('0.069'),
-        10e4,
-        punks.address,
-        proxy
-      )
-    ).to.be.not.be.reverted
+  it('appendTokenIds', async () => {
+    // check theoretical gas limit
+    const ids = []
+    for (let i = 0; i < 650; i++) {
+      ids.push(i)
+    }
+    const tx = await token.appendTokenIds(ids, { gasLimit: 15e6 })
+    const receipt = await tx.wait()
+    expect(receipt.gasUsed).to.eq(14847141)
+    // ensure owner only
+    token = token.connect(signers[1])
+    await expect(token.appendTokenIds([651, 652])).to.be.revertedWith(
+      'ONLY_OWNER'
+    )
   })
 
   it('preMint', async () => {
-    token = await NFT.deploy(
-      name,
-      symbol,
-      baseURI,
-      ethers.utils.parseEther('0.069'),
-      200, // use 200 so we can pre-mint entire supply in single batch
-      punks.address,
-      proxy
+    // attempt pre-mint from non-punk hoder wallet
+    token = token.connect(signers[3])
+    await expect(token.preMint(2, signers[3].address)).to.be.revertedWith(
+      'NON_PUNK_OWNER'
     )
-    // attempt pre-mint from second wallet
+    // attempt to pre-mint an unowned id
     token = token.connect(signers[1])
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
-      'ONLY_OWNER'
+    await expect(token.preMint(3, signers[1].address)).to.be.revertedWith(
+      'NON_PUNK_OWNER'
     )
-    // connect to main wallet and successfully pre-mint total amount
-    token = token.connect(wallet)
-    await expect(token.preMint(200, wallet.address)).to.not.be.reverted
-    // max supply
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
-      'TOTAL_SUPPLY_MINTED'
-    )
+    // successfully pre-mint
+    await expect(token.preMint(2, signers[3].address)).to.not.be.reverted
+    expect(await token.ownerOf(2)).to.equal(signers[3].address)
     // timeout pre-mint period
     await ethers.provider.send('evm_increaseTime', [7200])
     await ethers.provider.send('evm_mine', [])
-    await expect(token.preMint(1, wallet.address)).to.be.revertedWith(
+    token = token.connect(signers[2])
+    await expect(token.preMint(3, wallet.address)).to.be.revertedWith(
       'PRE_MINT_CLOSED'
     )
+    // allow owner to pre-mint after timeout
+    token = token.connect(wallet)
+    await expect(token.preMint(3, wallet.address)).to.not.be.reverted
+    expect(await token.ownerOf(3)).to.equal(wallet.address)
   })
 
   it('mint', async () => {
-    token = await NFT.deploy(
-      name,
-      symbol,
-      baseURI,
-      ethers.utils.parseEther('0.069'),
-      7, // use 7 so we can mint entire supply in single batch
-      punks.address,
-      proxy
-    )
+    // populate some tokenIds
+    await token.appendTokenIds([0, 5, 9, 23, 10, 45, 98], { gasLimit: 15e6 })
     // attempt to mint with insufficient price
     const value = await token.price()
+
     await expect(token.mint(wallet.address)).to.be.revertedWith(
       'MINT_PRICE_NOT_MET'
     )
@@ -104,15 +111,8 @@ describe('PunkRocks test all success and revert cases', () => {
   })
 
   it('withdrawProceeds', async () => {
-    token = await NFT.deploy(
-      name,
-      symbol,
-      baseURI,
-      ethers.utils.parseEther('0.069'),
-      10e4,
-      punks.address,
-      proxy
-    )
+    // populate some tokenIds
+    await token.appendTokenIds([0, 5, 9, 23, 10, 45, 98], { gasLimit: 15e6 })
     // mint a batch of tokens from a second wallet
     token = token.connect(signers[1])
     const value = await token.price()

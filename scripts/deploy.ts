@@ -26,7 +26,6 @@ async function main() {
       'PUNKROCKS',
       'ipfs://QmRRkBgZh3H52BLfYh2ebG7ufERRw2dqidTJUkP6VtxYcs/',
       ethers.utils.parseUnits('0.069', 'ether'),
-      10e4,
       '0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb', // CRYPTOPUNKS mainnet
       proxy,
     ],

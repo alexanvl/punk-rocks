@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+// import
+import "./ICryptoPunksMarket.sol";
 
 // Proxy contracts for OpenSea compatibility
 contract OwnableDelegateProxy {}
@@ -22,11 +24,12 @@ contract PunkRocks is ERC721 {
     string public baseURI;
     address public owner;
     address public proxyRegistryAddress;
-    address public cryptopunks;
+    ICryptoPunksMarket public cryptopunks;
     uint public price;
     uint public preMintTimeout;
-    uint public totalSupply;
+    uint public totalSupply = 10000;
     uint private _currentTokenId = 0;
+    uint[] private _tokenIds;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -38,42 +41,45 @@ contract PunkRocks is ERC721 {
         string memory symbol_,
         string memory baseURI_,
         uint price_,
-        uint totalSupply_,
         address punks_,
         address proxy_
     ) ERC721(name_, symbol_) {
         owner = msg.sender;
         baseURI = baseURI_;
         price = price_;
-        totalSupply = totalSupply_;
-        cryptopunks = punks_;
+        cryptopunks = ICryptoPunksMarket(punks_);
         proxyRegistryAddress = proxy_;
         preMintTimeout = block.timestamp + PRE_MINT_PERIOD;
     }
 
-    function _mint(address to_) private {
-        uint newTokenId = _getNextTokenId();
-        require(newTokenId <= totalSupply, "TOTAL_SUPPLY_MINTED");
-        _mint(to_, newTokenId);
-        _incrementTokenId();
-    }
-
     /**
-    * @dev Owner function to mint an amount of tokens during the timeout period
+    * @dev Function to allow owner to set the array of token ids to be minted
     */
-    function preMint(uint amount_, address to_) onlyOwner external
+    function appendTokenIds(uint[] memory ids_) onlyOwner external
     {
-        require(block.timestamp < preMintTimeout, "PRE_MINT_CLOSED");
-        for (uint i = 0; i < amount_; i++) {
-            _mint(to_);
+        for (uint i = 0; i < ids_.length; i++) {
+            _tokenIds.push(ids_[i]);
         }
     }
 
-    function _getNextTokenId() private view returns (uint) {
-        return _currentTokenId.add(1);
+    /**
+    * @dev Function to allow current punk owners to mint a corresponding token during the timeout period
+    */
+    function preMint(uint punkId, address to_) external
+    {
+        if (msg.sender != owner) {
+            require(block.timestamp < preMintTimeout, "PRE_MINT_CLOSED");
+            require(cryptopunks.punkIndexToAddress(punkId) == msg.sender, "NON_PUNK_OWNER");
+            _mint(to_, punkId);
+        } else {
+            _mint(owner, punkId);
+        }
     }
 
-    function _incrementTokenId() private {
+    function _mint(address to_) private {
+        require(_currentTokenId < _tokenIds.length, "TOTAL_SUPPLY_MINTED");
+        uint newTokenId = _tokenIds[_currentTokenId];
+        _mint(to_, newTokenId);
         _currentTokenId++;
     }
 

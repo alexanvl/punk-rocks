@@ -50,9 +50,5 @@
     "test": "npx hardhat test",
     "prepublishOnly": "yarn test"
   },
-  "license": "MIT",
-  "dependencies": {
-    "express": "4.17.1",
-    "mongodb": "4.1.0"
-  }
+  "license": "GPL-3.0"
 }
