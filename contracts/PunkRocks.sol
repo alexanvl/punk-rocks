@@ -55,6 +55,9 @@ contract PunkRocks is ERC721 {
         _incrementTokenId();
     }
 
+    /**
+    * @dev Owner function to mint an amount of tokens during the timeout period
+    */
     function preMint(uint amount_, address to_) onlyOwner external
     {
         require(block.timestamp < preMintTimeout, "PRE_MINT_CLOSED");
@@ -71,6 +74,9 @@ contract PunkRocks is ERC721 {
         _currentTokenId++;
     }
 
+    /**
+    * @dev ERC721 function for retreiving token specific metadata
+    */
     function tokenURI(uint tokenId_) public view override returns (string memory) {
         require(_exists(tokenId_), "ERC721Metadata: URI query for nonexistent token");
 
@@ -78,7 +84,7 @@ contract PunkRocks is ERC721 {
     }
 
     /**
-     *  isApprovedForAll to whitelist user"s OpenSea proxy accounts to enable gas-less listings.
+     *  @dev isApprovedForAll to whitelist user"s OpenSea proxy accounts to enable gas-less listings.
      */
     function isApprovedForAll(address owner_, address operator_)
         public
@@ -102,6 +108,9 @@ contract PunkRocks is ERC721 {
         payable(owner).transfer(address(this).balance);
     }
 
+    /**
+    * @dev Function to mint up to MAX_MINT tokens to recipient
+    */
     function mint(address to_) external payable {
         require(msg.value >= price, "MINT_PRICE_NOT_MET");
         require(block.timestamp >= preMintTimeout, "MINT_CLOSED");

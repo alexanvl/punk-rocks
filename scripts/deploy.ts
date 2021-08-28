@@ -30,7 +30,7 @@ async function main() {
       proxy,
     ],
     {
-      gasLimit: 10000000,
+      gasLimit: 10e6,
       gasPrice: ethers.utils.parseUnits(gas, 'gwei'),
       nonce,
     }
