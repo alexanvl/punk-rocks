@@ -1,7 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
+import { deployMockContract } from 'ethereum-waffle'
 import { Contract, ContractFactory } from 'ethers'
 import { ethers } from 'hardhat'
+import CryptoPunks from './abi/punks.json'
 
 const zero = ethers.BigNumber.from(0)
 const proxy = '0xf57b2c51ded3a29e6891aba85459d600256cf317'
@@ -10,15 +12,17 @@ const symbol = 'PUNKROCKS'
 const baseURI = 'https:/test.server/'
 
 let NFT: ContractFactory
+let punks: any
 let token: Contract
 let signers: SignerWithAddress[]
 let wallet: SignerWithAddress
 
 describe('PunkRocks test all success and revert cases', () => {
-  beforeEach(async () => {
+  before(async () => {
     NFT = await ethers.getContractFactory('PunkRocks')
     signers = await ethers.getSigners()
     wallet = signers[0]
+    punks = await deployMockContract(wallet as any, (CryptoPunks as any).abi)
   })
 
   it('constructor', async () => {
@@ -29,6 +33,7 @@ describe('PunkRocks test all success and revert cases', () => {
         baseURI,
         ethers.utils.parseEther('0.069'),
         10e4,
+        punks.address,
         proxy
       )
     ).to.be.not.be.reverted
@@ -41,6 +46,7 @@ describe('PunkRocks test all success and revert cases', () => {
       baseURI,
       ethers.utils.parseEther('0.069'),
       200, // use 200 so we can pre-mint entire supply in single batch
+      punks.address,
       proxy
     )
     // attempt pre-mint from second wallet
@@ -70,6 +76,7 @@ describe('PunkRocks test all success and revert cases', () => {
       baseURI,
       ethers.utils.parseEther('0.069'),
       7, // use 7 so we can mint entire supply in single batch
+      punks.address,
       proxy
     )
     // attempt to mint with insufficient price
@@ -103,6 +110,7 @@ describe('PunkRocks test all success and revert cases', () => {
       baseURI,
       ethers.utils.parseEther('0.069'),
       10e4,
+      punks.address,
       proxy
     )
     // mint a batch of tokens from a second wallet

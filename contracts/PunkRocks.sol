@@ -22,6 +22,7 @@ contract PunkRocks is ERC721 {
     string public baseURI;
     address public owner;
     address public proxyRegistryAddress;
+    address public cryptopunks;
     uint public price;
     uint public preMintTimeout;
     uint public totalSupply;
@@ -38,12 +39,14 @@ contract PunkRocks is ERC721 {
         string memory baseURI_,
         uint price_,
         uint totalSupply_,
+        address punks_,
         address proxy_
     ) ERC721(name_, symbol_) {
         owner = msg.sender;
         baseURI = baseURI_;
         price = price_;
         totalSupply = totalSupply_;
+        cryptopunks = punks_;
         proxyRegistryAddress = proxy_;
         preMintTimeout = block.timestamp + PRE_MINT_PERIOD;
     }
