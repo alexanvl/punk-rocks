@@ -17,6 +17,7 @@ contract PunkRocks is ERC721 {
     using Strings for uint;
 
     uint public constant PRE_MINT_PERIOD = 7200; // 2 hours in seconds
+    uint public constant MAX_MINT = 7;
 
     string public baseURI;
     address public owner;
@@ -103,8 +104,13 @@ contract PunkRocks is ERC721 {
 
     function mint(address to_) external payable {
         require(msg.value >= price, "MINT_PRICE_NOT_MET");
-        // Mint a new token to the recipient, if available
-        // Todo allow for multiple mints based on surplus value
-        _mint(to_);
+        require(block.timestamp >= preMintTimeout, "MINT_CLOSED");
+        uint mintAmount = msg.value.div(price);
+        if (mintAmount > MAX_MINT) {
+            mintAmount = MAX_MINT;
+        }
+        for (uint i = 0; i < mintAmount; i++) {
+            _mint(to_);
+        }
     }
 }
