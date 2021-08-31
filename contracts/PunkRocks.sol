@@ -79,6 +79,11 @@ contract PunkRocks is ERC721 {
     function _mint(address to_) private {
         require(_currentTokenId < _tokenIds.length, "TOTAL_SUPPLY_MINTED");
         uint newTokenId = _tokenIds[_currentTokenId];
+        while (_exists(newTokenId)) {
+            _currentTokenId++;
+            require(_currentTokenId < _tokenIds.length, "TOTAL_SUPPLY_MINTED");
+            newTokenId = _tokenIds[_currentTokenId];
+        }
         _mint(to_, newTokenId);
         _currentTokenId++;
     }

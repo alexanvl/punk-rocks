@@ -83,11 +83,14 @@ describe('PunkRocks test all success and revert cases', () => {
   })
 
   it('mint', async () => {
-    // populate some tokenIds
-    await token.appendTokenIds([0, 5, 9, 23, 10, 45, 98], { gasLimit: 15e6 })
+    // populate some tokenIds, including one that has been pre-minted
+    await token.appendTokenIds([2, 0, 5, 9, 23, 10, 45, 98], { gasLimit: 15e6 })
+    // pre-mint id 2
+    token = token.connect(signers[1])
+    await expect(token.preMint(2, signers[1].address)).to.not.be.reverted
+    token = token.connect(wallet)
     // attempt to mint with insufficient price
     const value = await token.price()
-
     await expect(token.mint(wallet.address)).to.be.revertedWith(
       'MINT_PRICE_NOT_MET'
     )
@@ -104,6 +107,9 @@ describe('PunkRocks test all success and revert cases', () => {
       token.mint(wallet.address, { value: value.mul(maxMint.add(1)) })
     ).to.not.be.reverted
     expect(await token.balanceOf(wallet.address)).to.be.equal(maxMint)
+    // check that pre-claimed token was skipped
+    expect(await token.ownerOf(2)).to.be.equal(signers[1].address)
+    expect(await token.ownerOf(0)).to.be.equal(wallet.address)
     // fail after total supply minted
     await expect(token.mint(wallet.address, { value })).to.be.revertedWith(
       'TOTAL_SUPPLY_MINTED'
